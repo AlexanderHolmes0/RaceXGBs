@@ -1,0 +1,218 @@
+---
+title: "RacingModels"
+author: "Alexander Holmes"
+date: "`r Sys.Date()`"
+output: html_document
+toc: true
+toc_depth: 3
+theme: united
+highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(finetune)
+#install.packages("finetune") #in case you are new to all this stuffs
+library(tidyverse)
+#install.packages("tidyverse")
+library(tidymodels)
+#install.packages("tidymodels")
+library(doParallel)
+#install.packages("doParallel") 
+library(vip)
+#install.packages("vip")
+library(embed)
+
+# Line 1 for parallelization
+cluster <- makeCluster(detectCores() - 1)
+# Line 2 for parallelization
+registerDoParallel(cluster)
+#if you wanna see pics change RStudio to visual (upper left corner `Source` -> `Visual`)
+```
+
+![](https://upload.wikimedia.org/wikipedia/commons/6/69/XGBoost_logo.png){width="262"}
+
+# Case 6 - `Hackathon`
+
+## Load and Split da data
+
+```{r}
+load("Case6-Spring23-Hackathon.RData")
+# investigate how x actually relate
+
+ALL <- rbind(CARS_TRAIN, CARS_HOLDOUT)
+
+ALL$luxury <- ifelse(ALL$company %in%
+  c(
+    "alfaromeo", "astonmartin", "bentley",
+    "ferrari", "jaguar", "lamborghini", "maserati",
+    "mercedesbenz", "maybach", "mclaren", "porsche", "rollsroyce", "renault", "landrover", "lotus", "peugeot", "tesla")
+  , 1, 0)
+
+ALL$new <- ifelse(ALL$kilometers <= 20921, 1, 0)
+ALL$old <- ifelse(ALL$kilometers >= 210000, 1, 0)
+
+# table(ALL$old)
+# table(ALL$new)
+# table(ALL$luxury)
+TRAIN <- ALL[1:5000, ]
+HOLDOUT <- ALL[5001:7853, ]
+
+rec <- recipe(price_in_aed ~ ., data = TRAIN) %>%
+  step_lencode_glm(all_nominal_predictors(), outcome = vars(price_in_aed)) #%>%
+  #step_normalize(all_numeric_predictors())#can change this to see if it makes diff 
+  
+
+  #step_normalize(all_predictors(), - kilometers) 
+#GGally::ggpairs(TRAIN[,c(1,2,6,7,18,19,20)])
+
+#train <- juice(prep(rec)) # make sure that rec is good to go
+#hold <- bake(prep(rec), HOLDOUT)
+folds <- vfold_cv(TRAIN, v = 5) # create resampling folds in training data
+# racing may need more folds. More folds means less test in each fold
+
+```
+
+## Off to the races! 🏇
+
+```{r}
+cluster <- makeCluster(detectCores() - 1)
+# Line 2 for parallelization
+registerDoParallel(cluster)
+
+
+xgb_spec <- boost_tree( #model spec basically showing what we wanna do    
+    trees = tune(),
+    min_n = tune(),
+    mtry = tune(),
+    learn_rate = tune(),
+    sample_size = tune(),
+    tree_depth = tune(),
+    loss_reduction = tune()) %>% 
+  set_engine("xgboost") %>% #see ?set_engine for a full list of possibilites
+  set_mode("regression") #"classification
+
+
+# Workflow
+xgb_wf <- workflow() %>%  #add the preproc with the model spec
+  add_recipe(rec) %>% 
+  add_model(xgb_spec)
+
+
+#this will take awhile dependent on processor speed and # of records
+#With shop_hq data it took upwards of 10 minutes to race the models!
+
+
+xgb_grid <- grid_latin_hypercube( 
+  #cover all bases in the ~7 dimensional space of possible hyper params
+  trees(range = c(1700,2400)),
+  tree_depth(range = c(4,20)),
+  min_n(range = c(1,10)),
+  loss_reduction(),
+  sample_size = sample_prop(range = c(.4,.9)),
+  mtry(range = c(4,12)),
+  learn_rate(range = c(-4,-1)),
+  size = 10
+  )
+
+xgb_params <- parameters( #for annealing
+  trees(range = c(1700,2400)),
+  tree_depth(range = c(4,20)),
+  min_n(range = c(1,10)),
+  loss_reduction(),
+  sample_size = sample_prop(range = c(.2,.9)),
+  mtry(range = c(4,12)),
+  learn_rate(range = c(-4,-1))
+  )
+
+reg_xgb <- expand.grid( #lowest just to save it 
+  trees = c(2047),
+  tree_depth = c(16),
+  min_n=c(3),
+  loss_reduction= 0.000000226 ,
+  sample_size = c(0.792),
+  mtry= c(5),
+  learn_rate = c(.00916)
+  )
+
+xgb_best <- tune_grid(
+  object = xgb_wf,
+  resamples = folds,
+  metrics = metric_set(rmse),
+  grid = reg_xgb, #number of each different hyperparams to test out
+)
+
+xgb_rs <- tune_race_anova(
+  object = xgb_wf,
+  resamples = folds,
+  metrics = metric_set(rmse),
+  grid = xgb_grid, #number of each different hyperparams to test out
+  control = control_race(verbose_elim = TRUE)
+)
+
+
+xgb_anneal <- tune_sim_anneal(
+  object = xgb_wf,
+  resamples = folds,
+  initial = xgb_rs, #switch this to xgb_anneal to continue the search
+  param_info = xgb_params,
+  iter = 50, #number of each different hyperparams to test out
+  control = control_sim_anneal(verbose_iter = TRUE)
+)
+
+
+show_best(xgb_rs) #see the best model
+show_best(xgb_anneal)
+
+
+autoplot(xgb_rs) #see the best model
+autoplot(xgb_anneal)
+
+
+plot_race(xgb_rs)+ #see the race in action lol 
+  theme_bw()
+
+xgb_last <- xgb_wf %>% #see how the best model did in the race
+  finalize_workflow(select_by_one_std_err(xgb_rs, "rmse")) %>% #change this from rs if you `annealed`
+  fit(TRAIN)
+
+xgb_last %>%
+  extract_fit_parsnip() %>%
+  vip(geom = "point", num_features = 20)
+
+predictions <- predict(
+  xgb_last,
+  new_data = HOLDOUT
+)
+
+SS <- data.frame(ID = 5001:7853, price_in_aed = predictions$.pred)
+write.csv(SS, file = "XGBoostV2.csv", row.names = FALSE)
+```
+
+```{r}
+
+y.preds <- predict(xgb_last,new_data = TRAIN)
+
+diagnostic <- TRAIN
+diagnostic$y_preds <- y.preds
+diagnostic$y_true <- TRAIN$price_in_aed
+diagnostic$error <- y.preds - TRAIN$price_in_aed
+diagnostic$ABSerror <- abs(y.preds - TRAIN$price_in_aed)
+ggplot(diagnostic, aes(y_preds, price_in_aed, color = kilometers))+
+  geom_point()+
+  geom_abline(slope = 1,intercept = 0, col = 'red')
+
+
+```
+
+IDK how I got this but it was randomly found
+
+![](images/CURRENT%20KAGGLE%20WIN4-13-2023-01.png)
+
+##### \*Disclaimer\*
+
+This takes a long *a\$\$* time to do so you might wanna go on a fun walk or go shopping while your model is at the gym training away. ~*No Pun Intended*~
+
+[Julia Silge](https://juliasilge.com/) provided ***most*** of the framework needed to get this .rmd off the ground.
+
+Original source found [here](https://juliasilge.com/blog/baseball-racing/).
