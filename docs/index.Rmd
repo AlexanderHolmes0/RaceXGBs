@@ -12,8 +12,8 @@ output:
     theme: lumen
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, eval=FALSE)
+```{r setup, eval=F}
+knitr::opts_chunk$set( eval=FALSE)
 library(finetune)
 #install.packages("finetune") #in case you are new to all this stuffs
 library(tidyverse)
@@ -30,7 +30,7 @@ library(embed)
 cluster <- makeCluster(detectCores() - 1)
 # Line 2 for parallelization
 registerDoParallel(cluster)
-#if you wanna see pics change RStudio to visual (upper left corner `Source` -> `Visual`)
+
 ```
 
 # Case 6 - `Hackathon`
@@ -39,7 +39,7 @@ registerDoParallel(cluster)
 
 ## Load and Split da data
 
-```{r}
+```{r, eval=FALSE}
 load("Case6-Spring23-Hackathon.RData")
 # investigate how x actually relate
 
@@ -80,7 +80,7 @@ folds <- vfold_cv(TRAIN, v = 5) # create resampling folds in training data
 
 ## Off to the races! 🏇
 
-```{r, eval = F}
+```{r, eval=FALSE}
 cluster <- makeCluster(detectCores() - 1)
 # Line 2 for parallelization
 registerDoParallel(cluster)
@@ -194,7 +194,7 @@ SS <- data.frame(ID = 5001:7853, price_in_aed = predictions$.pred)
 write.csv(SS, file = "XGBoostV2.csv", row.names = FALSE)
 ```
 
-```{r}
+```{r, eval=FALSE}
 
 y.preds <- predict(xgb_last,new_data = TRAIN)
 

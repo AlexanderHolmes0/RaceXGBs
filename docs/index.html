@@ -1516,6 +1516,23 @@ border-radius: 0px;
 </div>
 
 
+<pre class="r"><code>knitr::opts_chunk$set( eval=FALSE)
+library(finetune)
+#install.packages(&quot;finetune&quot;) #in case you are new to all this stuffs
+library(tidyverse)
+#install.packages(&quot;tidyverse&quot;)
+library(tidymodels)
+#install.packages(&quot;tidymodels&quot;)
+library(doParallel)
+#install.packages(&quot;doParallel&quot;) 
+library(vip)
+#install.packages(&quot;vip&quot;)
+library(embed)
+
+# Line 1 for parallelization
+cluster &lt;- makeCluster(detectCores() - 1)
+# Line 2 for parallelization
+registerDoParallel(cluster)</code></pre>
 <div id="case-6---hackathon" class="section level1" number="1">
 <h1><span class="header-section-number">1</span> Case 6 -
 <code>Hackathon</code></h1>
