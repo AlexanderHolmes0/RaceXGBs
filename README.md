@@ -2,20 +2,6 @@
 Explain what the h**k it means to 'race' models.
 
 
-**Once the Case 6 Hackathon lapses I'll gladly upload my file here.** 
-Not before tho hehe
-
----
-title: "RacingModels"
-author: "Alexander Holmes"
-date: "`r Sys.Date()`"
-output: html_document
-toc: true
-toc_depth: 3
-theme: united
-highlight: tango
----
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(finetune)
