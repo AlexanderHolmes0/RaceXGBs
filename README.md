@@ -200,7 +200,7 @@ ggplot(diagnostic, aes(y_preds, price_in_aed, color = kilometers))+
 
 IDK how I got this but it was randomly found
 
-![](images/CURRENT%20KAGGLE%20WIN4-13-2023-01.png)
+![](https://github.com/AlexanderHolmes0/RaceXGBs/blob/main/CURRENT%20KAGGLE%20WIN4-13-2023.png)
 
 ##### \*Disclaimer\*
 
