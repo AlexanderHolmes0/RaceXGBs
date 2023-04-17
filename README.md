@@ -23,7 +23,7 @@ registerDoParallel(cluster)
 #if you wanna see pics change RStudio to visual (upper left corner `Source` -> `Visual`)
 ```
 
-![](https://upload.wikimedia.org/wikipedia/commons/6/69/XGBoost_logo.png){width="262"}
+![](https://upload.wikimedia.org/wikipedia/commons/6/69/XGBoost_logo.png)
 
 # Case 6 - `Hackathon`
 
