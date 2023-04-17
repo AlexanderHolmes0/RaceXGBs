@@ -1,16 +1,19 @@
 ---
-title: "RacingModels"
+title: "Racing XGBoost Models"
 author: "Alexander Holmes"
 date: "`r Sys.Date()`"
-output: html_document
-toc: true
-toc_depth: 3
-theme: united
-highlight: tango
+output:
+  html_document:
+    toc: true
+    toc_float:
+      toc_collapsed: false
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval=FALSE)
 library(finetune)
 #install.packages("finetune") #in case you are new to all this stuffs
 library(tidyverse)
@@ -30,9 +33,9 @@ registerDoParallel(cluster)
 #if you wanna see pics change RStudio to visual (upper left corner `Source` -> `Visual`)
 ```
 
-![](https://upload.wikimedia.org/wikipedia/commons/6/69/XGBoost_logo.png){width="262"}
-
 # Case 6 - `Hackathon`
+
+![](images/XGBoost_logo.png){width="266"}
 
 ## Load and Split da data
 
@@ -46,7 +49,9 @@ ALL$luxury <- ifelse(ALL$company %in%
   c(
     "alfaromeo", "astonmartin", "bentley",
     "ferrari", "jaguar", "lamborghini", "maserati",
-    "mercedesbenz", "maybach", "mclaren", "porsche", "rollsroyce", "renault", "landrover", "lotus", "peugeot", "tesla")
+    "mercedesbenz", "maybach", "mclaren", "porsche", 
+    "rollsroyce", "renault", "landrover", "lotus", 
+    "peugeot", "tesla")
   , 1, 0)
 
 ALL$new <- ifelse(ALL$kilometers <= 20921, 1, 0)
@@ -75,7 +80,7 @@ folds <- vfold_cv(TRAIN, v = 5) # create resampling folds in training data
 
 ## Off to the races! 🏇
 
-```{r}
+```{r, eval = F}
 cluster <- makeCluster(detectCores() - 1)
 # Line 2 for parallelization
 registerDoParallel(cluster)
@@ -202,12 +207,15 @@ ggplot(diagnostic, aes(y_preds, price_in_aed, color = kilometers))+
   geom_point()+
   geom_abline(slope = 1,intercept = 0, col = 'red')
 
-
 ```
+
+------------------------------------------------------------------------
 
 IDK how I got this but it was randomly found
 
 ![](images/CURRENT%20KAGGLE%20WIN4-13-2023-01.png)
+
+------------------------------------------------------------------------
 
 ##### \*Disclaimer\*
 
